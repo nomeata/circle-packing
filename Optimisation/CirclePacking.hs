@@ -40,24 +40,34 @@ import Data.Maybe (fromMaybe)
 packCircles :: (a -> Double) -> [a] -> [(a, (Double, Double))]
 packCircles radiusFunction =
     map (\(x,p) -> (snd x, p)) .
+    fst .
     go . 
     sortBy (comparing fst) .
     map (\x -> (radiusFunction x, x))
   where
     radius = fst
-    go [] = []
-    go (c:cs) = let placed = go cs in (c, place c placed) : placed
-    place _ [] = (0,0)
-    place c [(c',(x,y))] = (x + radius c + radius c', y)
-    place c placed = 
-        fromMaybe (error "packCircles: The end of the real plane has been reached?") $
-        find (\p -> all (valid p) placed) $
-        sortBy (comparing centerDistance)
-                        [ p | (c1, c2) <- allPairs placed,
-                              touching c1 c2,
-                              p <- near c1 c2
-                        ]
+    go [] = ([],[])
+    go (c:cs) = let (placed, pairs) = go cs
+                    (cp, newPairs) = place c placed pairs
+                in (cp : placed, newPairs ++ pairs)
+
+    place c [] _ = ((c, (0,0)), [])
+
+    place c [cp'@(c',(x,y))] _ = 
+        let cp = (c, (x + radius c + radius c', y))
+        in (cp, [(cp, cp')])
+
+    place c placed pairs = (cp, newPairs)
       where
+        newPairs = [ (cp, cp') | cp' <- placed, touching cp cp' ]
+        cp = (c, p)
+        p = fromMaybe (error "packCircles: The end of the real plane has been reached?") $
+            find (\p -> all (valid p) placed) $
+            sortBy (comparing centerDistance)
+                            [ p | (c1, c2) <- pairs,
+                                  touching c1 c2,
+                                  p <- near c1 c2
+                            ]
         centerDistance (x,y) = sqrt ((centerx - x)**2  + (centery - y)**2)
 
         centerx = sum [x * (radius c')**2 | (c',(x,_)) <- placed] / area
@@ -86,9 +96,6 @@ packCircles radiusFunction =
 
             c2x = dx - h * (y2 - y1) / base
             c2y = dy + h * (x2 - x1) / base
-
--- Possible ways to speed this up:
--- * Remember which circles are touching 
 
 eps :: Double
 eps = 0.00001
