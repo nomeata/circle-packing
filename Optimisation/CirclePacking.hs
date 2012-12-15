@@ -16,6 +16,12 @@ import Data.List (sortBy, find)
 import Data.Ord (comparing)
 import Data.Maybe (fromMaybe)
 
+type Radius = Double
+type Circle a = (Double, a)
+type Coordinate = (Double, Double)
+type PlacedCircle a = ((Double, a), Coordinate)
+type TouchingCircles a = [(PlacedCircle a, PlacedCircle a)]
+
 {- | 'packCircles' takes a list of circles and a function that yields the
    radius of the circle.
   
@@ -39,18 +45,30 @@ import Data.Maybe (fromMaybe)
 -}
 packCircles :: (a -> Double) -> [a] -> [(a, (Double, Double))]
 packCircles radiusFunction =
+    -- Forget the cached radius
     map (\(x,p) -> (snd x, p)) .
+    -- Forget the pairs of touching circles
     fst .
+    -- Run the main algorithm
     go . 
-    sortBy (comparing fst) .
+    -- Look at large circles last
+    sortBy (comparing radius) .
+    -- Cache the radius
     map (\x -> (radiusFunction x, x))
   where
+    -- Just for a nicer name
+    radius :: Circle a -> Radius
     radius = fst
+
+    -- Place the tail, then try to place the head
+    go :: [Circle a] -> ([PlacedCircle a], TouchingCircles a)
     go [] = ([],[])
     go (c:cs) = let (placed, pairs) = go cs
                     (cp, newPairs) = place c placed pairs
                 in (cp : placed, newPairs ++ pairs)
 
+    place :: Circle a -> [PlacedCircle a] -> TouchingCircles a ->
+                (PlacedCircle a, TouchingCircles a)
     place c [] _ = ((c, (0,0)), [])
 
     place c [cp'@(c',(x,y))] _ = 
@@ -62,11 +80,11 @@ packCircles radiusFunction =
         newPairs = [ (cp, cp') | cp' <- placed, touching cp cp' ]
         cp = (c, p)
         p = fromMaybe (error "packCircles: The end of the real plane has been reached?") $
-            find (\p -> all (valid p) placed) $
+            find (\p' -> all (valid p') placed) $
             sortBy (comparing centerDistance)
-                            [ p | (c1, c2) <- pairs,
+                            [ p' | (c1, c2) <- pairs,
                                   touching c1 c2,
-                                  p <- near c1 c2
+                                  p' <- near c1 c2
                             ]
         centerDistance (x,y) = sqrt ((centerx - x)**2  + (centery - y)**2)
 
@@ -99,11 +117,6 @@ packCircles radiusFunction =
 
 eps :: Double
 eps = 0.00001
-
-allPairs :: [a] -> [(a,a)]
-allPairs [] = []
-allPairs (x:xs) = [ (x,y) | y <- xs ] ++ allPairs xs
-
 
 {-$example
 
