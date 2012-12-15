@@ -14,9 +14,9 @@ description:         Given a number of circles with their radii, this packags
                      Contributions of better algorithms are welcome.
 license:             BSD3
 license-file:        LICENSE
-author:              Joachim Breitner
-maintainer:          mail@joachim-breitner.de
--- copyright:           
+author:              Joachim Breitner <mail@joachim-breitner.de>
+maintainer:          Joachim Breitner <mail@joachim-breitner.de>
+copyright:           2012, Joachim Breitner
 category:            Optimisation
 build-type:          Simple
 cabal-version:       >=1.8
