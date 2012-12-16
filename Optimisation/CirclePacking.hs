@@ -84,9 +84,7 @@ place :: Circle a -> [PlacedCircle a] -> TouchingCircles a ->
             (PlacedCircle a, TouchingCircles a)
 place c [] _ = ((c, (0,0)), [])
 
--- Fay bug, cannot pattern match on a singleton here
---place c [cp'@(c',(x,y))] _ = 
-place c ((cp'@(c',(x,y))):[]) _ = 
+place c [cp'@(c',(x,y))] _ = 
         let cp = (c, (x + radius c + radius c', y))
         in (cp, [(cp, cp')])
 
