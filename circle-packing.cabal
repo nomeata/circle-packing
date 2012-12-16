@@ -20,6 +20,14 @@ copyright:           2012, Joachim Breitner
 category:            Optimisation
 build-type:          Simple
 cabal-version:       >=1.8
+extra-source-files:
+                     benchmark.hs
+                     diagrams-demo.hs
+                     fay/Makefile
+                     fay/fay-demo.html
+                     fay/fay-demo.hs
+                     fay/fay-demo.js
+
 
 library
   exposed-modules:   Optimisation.CirclePacking 
