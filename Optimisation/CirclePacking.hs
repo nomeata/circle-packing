@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 {- |
    Copyright  : Copyright (C) 2012 Joachim Breitner
    License    : BSD3
@@ -12,9 +14,20 @@ module Optimisation.CirclePacking (
     -- $example
     ) where
 
+#if defined(__GLASGOW_HASKELL__ )
 import Data.List (sortBy, find)
 import Data.Ord (comparing)
 import Data.Maybe (fromMaybe)
+#else
+import Language.Fay.Prelude
+
+-- Not provided in Fay set, it seems
+comparing :: (b -> Double) -> b -> b -> Ordering
+comparing p x y = compare (p x) (p y)
+
+fromMaybe     :: a -> Maybe a -> a
+fromMaybe d x = case x of {Nothing -> d;Just v  -> v}
+#endif
 
 type Radius = Double
 type Circle a = (Double, a)
@@ -46,7 +59,7 @@ type TouchingCircles a = [(PlacedCircle a, PlacedCircle a)]
 packCircles :: (a -> Double) -> [a] -> [(a, (Double, Double))]
 packCircles radiusFunction =
     -- Forget the cached radius
-    map (\(x,p) -> (snd x, p)) .
+    map (\t -> case t of (x,p) -> (snd x, p)) .
     -- Forget the pairs of touching circles
     fst .
     -- Run the main algorithm
@@ -55,65 +68,67 @@ packCircles radiusFunction =
     sortBy (comparing radius) .
     -- Cache the radius
     map (\x -> (radiusFunction x, x))
-  where
-    -- Just for a nicer name
-    radius :: Circle a -> Radius
-    radius = fst
 
-    -- Place the tail, then try to place the head
-    go :: [Circle a] -> ([PlacedCircle a], TouchingCircles a)
-    go [] = ([],[])
-    go (c:cs) = let (placed, pairs) = go cs
-                    (cp, newPairs) = place c placed pairs
-                in (cp : placed, newPairs ++ pairs)
+-- Just for a nicer name
+radius :: Circle a -> Radius
+radius = fst
 
-    place :: Circle a -> [PlacedCircle a] -> TouchingCircles a ->
-                (PlacedCircle a, TouchingCircles a)
-    place c [] _ = ((c, (0,0)), [])
+-- Place the tail, then try to place the head
+go :: [Circle a] -> ([PlacedCircle a], TouchingCircles a)
+go  [] = ([],[])
+go  (c:cs) = case go cs of
+               (placed, pairs) -> case place c placed pairs of
+                 (cp, newPairs) -> (cp : placed, newPairs ++ pairs)
 
-    place c [cp'@(c',(x,y))] _ = 
+place :: Circle a -> [PlacedCircle a] -> TouchingCircles a ->
+            (PlacedCircle a, TouchingCircles a)
+place c [] _ = ((c, (0,0)), [])
+
+-- Fay bug, cannot pattern match on a singleton here
+--place c [cp'@(c',(x,y))] _ = 
+place c ((cp'@(c',(x,y))):[]) _ = 
         let cp = (c, (x + radius c + radius c', y))
         in (cp, [(cp, cp')])
 
-    place c placed pairs = (cp, newPairs)
+place c placed pairs = (cp, newPairs)
+  where
+    newPairs = [ (cp, cp') | cp' <- placed, touching cp cp' ]
+    cp = (c, p)
+    p = fromMaybe (error "packCircles: The end of the real plane has been reached?") $
+        find (\p' -> all (valid p') placed) $
+        sortBy (comparing centerDistance)
+                        [ p' | (c1, c2) <- pairs,
+                              touching c1 c2,
+                              p' <- near c1 c2
+                        ]
+    centerDistance (x,y) = sqrt ((centerx - x)**2  + (centery - y)**2)
+
+    centerx = sum [x * (radius c')**2 | (c',(x,_)) <- placed] / area
+    centery = sum [y * (radius c')**2 | (c',(_,y)) <- placed] / area
+    area = sum [(radius c')**2 | (c',_) <- placed] 
+
+    valid (x1,y1) (c2,(x2,y2)) =
+        sqrt ((x2 - x1)**2  + (y2-y1)**2) >= (radius c + radius c2) * (1-eps)
+    
+    touching (c1,(x1,y1)) (c2, (x2, y2)) = 
+        sqrt ((x2 - x1)**2  + (y2-y1)**2) <= (radius c1 + radius c2) * (1+eps)
+
+    near (c1,(x1,y1)) (c2, (x2, y2)) = [(c1x,c1y), (c2x,c2y)]
       where
-        newPairs = [ (cp, cp') | cp' <- placed, touching cp cp' ]
-        cp = (c, p)
-        p = fromMaybe (error "packCircles: The end of the real plane has been reached?") $
-            find (\p' -> all (valid p') placed) $
-            sortBy (comparing centerDistance)
-                            [ p' | (c1, c2) <- pairs,
-                                  touching c1 c2,
-                                  p' <- near c1 c2
-                            ]
-        centerDistance (x,y) = sqrt ((centerx - x)**2  + (centery - y)**2)
-
-        centerx = sum [x * (radius c')**2 | (c',(x,_)) <- placed] / area
-        centery = sum [y * (radius c')**2 | (c',(_,y)) <- placed] / area
-        area = sum [(radius c')**2 | (c',_) <- placed] 
-
-        valid (x1,y1) (c2,(x2,y2)) =
-            sqrt ((x2 - x1)**2  + (y2-y1)**2) >= (radius c + radius c2) * (1-eps)
+        base = sqrt ((x2 - x1)**2  + (y2 - y1)**2)
+        lat1 = radius c1 + radius c
+        lat2 = radius c2 + radius c
+        --From http://stackoverflow.com/a/11356687/946226
+        ad_length = (base**2 + lat1**2 - lat2**2)/(2 * base)
+        h = sqrt (abs (lat1**2 - ad_length**2))
+        dx = x1 + ad_length * (x2 - x1)/base
+        dy = y1 + ad_length * (y2 - y1)/base
         
-        touching (c1,(x1,y1)) (c2, (x2, y2)) = 
-            sqrt ((x2 - x1)**2  + (y2-y1)**2) <= (radius c1 + radius c2) * (1+eps)
+        c1x = dx + h * (y2 - y1) / base
+        c1y = dy - h * (x2 - x1) / base
 
-        near (c1,(x1,y1)) (c2, (x2, y2)) = [(c1x,c1y), (c2x,c2y)]
-          where
-            base = sqrt ((x2 - x1)**2  + (y2 - y1)**2)
-            lat1 = radius c1 + radius c
-            lat2 = radius c2 + radius c
-            --From http://stackoverflow.com/a/11356687/946226
-            ad_length = (base**2 + lat1**2 - lat2**2)/(2 * base)
-            h = sqrt (abs (lat1**2 - ad_length**2))
-            dx = x1 + ad_length * (x2 - x1)/base
-            dy = y1 + ad_length * (y2 - y1)/base
-            
-            c1x = dx + h * (y2 - y1) / base
-            c1y = dy - h * (x2 - x1) / base
-
-            c2x = dx - h * (y2 - y1) / base
-            c2y = dy + h * (x2 - x1) / base
+        c2x = dx - h * (y2 - y1) / base
+        c2y = dy + h * (x2 - x1) / base
 
 eps :: Double
 eps = 0.00001
