@@ -60,6 +60,8 @@ packCircles :: (a -> Double) -> [a] -> [(a, (Double, Double))]
 packCircles radiusFunction =
     -- Forget the cached radius
     map (\t -> case t of (x,p) -> (snd x, p)) .
+    -- Make sure we center up the circles
+    centerUp .
     -- Forget the pairs of touching circles
     fst .
     -- Run the main algorithm
@@ -127,6 +129,13 @@ place c placed pairs = (cp, newPairs)
 
         c2x = dx - h * (y2 - y1) / base
         c2y = dy + h * (x2 - x1) / base
+
+centerUp :: [PlacedCircle a] -> [PlacedCircle a]
+centerUp placed = map (\(o,(x,y)) -> (o, (x-centerx, y-centery))) placed
+  where
+    centerx = sum [x * (radius c')**2 | (c',(x,_)) <- placed] / area
+    centery = sum [y * (radius c')**2 | (c',(_,y)) <- placed] / area
+    area = sum [(radius c')**2 | (c',_) <- placed] 
 
 eps :: Double
 eps = 0.00001
