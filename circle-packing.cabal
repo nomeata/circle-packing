@@ -1,5 +1,5 @@
 name:                circle-packing
-version:             0.1.0.1
+version:             0.1.0.2
 synopsis:            Simple heuristic for packing discs of varying radii in a circle
 description:         Given a number of circles with their radii, this packags
                      tries to arrange them tightly, without overlap and forming a
