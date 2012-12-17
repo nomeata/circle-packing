@@ -13,7 +13,7 @@ main = do
     window <- getWindow
     addEventListener window "load" start False
 
-colors = ["Black","Green","Silver", "Lime", "Gray", "Olive", "Yellow", "Maroon", "Navy", "Red", "Blue", "Purple", "Teal", "Fuchsia", "Aqua"]
+colors = ["Green","Silver", "Lime", "Gray", "Olive", "Yellow", "Maroon", "Navy", "Red", "Blue", "Purple", "Teal", "Fuchsia", "Aqua"]
 
 parseInt :: String -> Int
 parseInt = ffi "(function () { var n = window.parseInt(%1, 10); if (isNaN(n)) return null; return n; })()"
@@ -40,15 +40,14 @@ update = do
   value <- getValue input
   let radii = map (fromIntegral . parseInt) (words value)
 
-  let packed = packCircles id radii
-  let colored = zip packed (cycle colors)
-  forM_ colored $ \res -> do
-    let circle = fst res
-    let color = snd res
-    beginPath context
-    addCircle context (fst circle) (fst (snd circle) + w/2) (snd (snd circle) + h/2)
-    setFillStyle context color
-    fill context
+  let colored = zip radii (cycle colors)
+  let packed = packCircles fst colored
+  forM_ packed $ \res -> case res of
+    ((r,c),(x,y)) -> do
+        beginPath context
+        addCircle context r (x + w/2) (y + h/2)
+        setFillStyle context c
+        fill context
 
 
 class Eventable a
