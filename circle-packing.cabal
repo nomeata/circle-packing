@@ -27,7 +27,11 @@ extra-source-files:
                      fay/fay-demo.html
                      fay/fay-demo.hs
                      fay/fay-demo.js
-
+                     haste/Canvas.hs
+                     haste/haste-demo.hs
+                     haste/haste-demo.js
+                     haste/haste-demo.html
+                     haste/helpers.js
 
 library
   exposed-modules:   Optimisation.CirclePacking 
