@@ -34,8 +34,9 @@ extra-source-files:
                      haste/helpers.js
 
 library
-  exposed-modules:   Optimisation.CirclePacking 
-  build-depends:     base ==4.5.* || ==4.6.* || ==4.7.*
+  exposed-modules:   Optimisation.CirclePacking
+  build-depends:     base == 4.2.* || == 4.3.* || == 4.4.* ||
+                          == 4.5.* || == 4.6.* || == 4.7.*
   ghc-options:       -Wall
 
 source-repository head
