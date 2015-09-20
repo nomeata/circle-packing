@@ -35,7 +35,6 @@ extra-source-files:
                      haste/haste-demo.js
                      haste/haste-demo.html
                      haste/helpers.js
-                     ghcjs/ghcjs-demo.jsexe
                      ghcjs/ghcjs-demo.jsexe/out.js
                      ghcjs/ghcjs-demo.jsexe/rts.js
                      ghcjs/ghcjs-demo.jsexe/lib.js
